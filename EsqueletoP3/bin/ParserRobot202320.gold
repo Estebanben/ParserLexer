@@ -1,0 +1,148 @@
+using gold.**
+
+toSet(C) :=  {x|  x in C}
+
+///====   mini Parser===
+
+function createParser(A):IPushdownAutomaton begin
+	
+	Q:= (0‥37)∪{'I','C','F'}
+	
+	Σ:= toSet(A)  ∪ {' ', '\n'}
+	
+	Γ:={'1','2','{','(','I',')',','}
+	q₀:='I'
+	F:= {'F'}
+	M:=GPushdownAutomaton(Q,Σ,Γ,q₀,F)
+SkipChars := {' ', 't', '\n'}   // this will only  be used when testing only the parser as the lexer removes  SkipChars
+
+M.delta('I','C',λ).ignore()
+M.delta('C',0,'{').push("{")
+
+// terminar 
+
+M.delta('C','C','}').pop("{")
+M.delta('C','F','}').pop("{")
+M.delta('C',26,'}').pop("{")
+
+
+M.delta('C',0,';').ignore()
+M.delta('C',0,')').pop("(")
+M.delta('C','C',')').pop("(")
+
+// transitions for  walk(var,var) / leap(var,var)
+
+M.delta(0,1,'W').ignore()
+M.delta(0,1,'L').ignore()
+M.delta(1,2,'(').ignore()
+M.delta(2,3,'i').ignore()
+M.delta(2,3,'#').ignore()
+M.delta(3,4,',').ignore()
+M.delta(4,5,'i').ignore()
+M.delta(5,'C',')').ignore()
+ 
+ // transitions for  walk(number) / walk(var) / leap(var) / drop(var) , etc‥.
+M.delta(0,1,'W').ignore()
+M.delta(0,1,'L').ignore()
+M.delta(0,1,'G').ignore()
+M.delta(0,1,'g').ignore()
+M.delta(0,1,'d').ignore()
+M.delta(0,1,'Q').ignore()
+M.delta(1,2,'(').ignore()
+M.delta(2,5,'#').ignore()
+M.delta(2,5,'i').ignore()
+M.delta(5,'C',')').ignore()
+
+// transitions for  turnto(var)
+ 
+M.delta(0,7,'T').ignore()
+M.delta(0,7,'t').ignore()
+M.delta(7,8,'(').ignore()
+M.delta(8,9,'i').ignore()
+M.delta(9,'C',')').ignore()
+
+// transitions for  jump(num,num) / jump(var,var)
+ 
+M.delta(0,10,'j').ignore()
+M.delta(10,11,'(').ignore()
+M.delta(11,12,'i').ignore()
+M.delta(11,12,'#').ignore()
+M.delta(12,13,',').ignore()
+M.delta(13,14,'i').ignore()
+M.delta(13,14,'#').ignore()
+M.delta(14,'C',')').ignore()
+
+// transition for nop
+
+M.delta(0,15,'.').ignore()
+M.delta(15,16,'(').ignore()
+M.delta(15,15,' ').ignore()
+M.delta(16,'C',')').ignore()
+
+// condicional - facing 
+
+M.delta(17,18,'F').ignore()
+M.delta(18,19,'(').ignore()
+M.delta(19,20,'i').ignore()
+M.delta(20,'C',')').ignore()
+
+// condicional - can 
+
+M.delta(21,22,'C').ignore()
+M.delta(22,0,'(').push("(")
+
+// condicional - not
+
+M.delta(23,24,'N').ignore()
+M.delta(24,25, ':').ignore()
+M.delta(25,18, 'F').ignore()
+M.delta(25,22, 'C').ignore()
+M.delta(25,24, 'N').ignore()
+
+
+// condicional if
+	
+M.delta(0,25,'I').push("I")
+M.delta(26,'C','E').pop("I")
+
+// while 
+
+M.delta(0,25,'M').ignore()
+
+// repeat
+
+M.delta(0,27,'R').ignore()
+M.delta(27,28,'#').ignore()
+M.delta(27,28,'i').ignore()
+M.delta(28,'C','A').ignore()
+
+//DefVar
+M.delta(0,29,'V').ignore()
+M.delta(29,30,'i').ignore()
+M.delta(30,'C','#').ignore()
+//DefProc
+M.delta(0,31,'P').ignore()
+M.delta(31,32,'i').ignore()
+M.delta(32,33,'(').push("(")
+M.delta(33,34,'i').ignore()
+M.delta(34,'C',')').pop("(")
+M.delta(34,33,',').ignore()
+M.delta(33,'C',')').pop("(")
+//CallProc
+M.delta(0,35,'i').ignore()
+M.delta(35,36,'(').push("(")
+M.delta(36,37,'i').ignore()
+M.delta(36,37,'#').ignore()
+M.delta(37,36,',').ignore()
+M.delta(36,'C',')').pop("(")
+M.delta(37,'C',')').pop("(")
+
+ for each q in Q do
+ 	for each s in SkipChars do
+ 	   M.delta(q,q,λ+s).ignore()
+ end
+ end
+
+
+return M
+end
